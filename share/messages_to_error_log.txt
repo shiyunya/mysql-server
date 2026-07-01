@@ -13374,7 +13374,6 @@ ER_AUDIT_LOG_DATABASE_NAME_TOO_LONG
 ER_AUDIT_LOG_DATABASE_NAME_EMPTY
   eng "Database name cannot be empty."
 
-
 ER_RPL_REPLICA_VERSION_INCOMPATIBLE
   eng "Replication from higher version source (%s) to lower version replica (%s) is disallowed due to replica_allow_higher_version_source=OFF."
 
@@ -13449,6 +13448,12 @@ ER_WARN_AUDIT_LOG_SYSVAR_ADJUSTED
 
 ER_WARN_AUDIT_LOG_SYSVAR_DISCARDED
   eng "Variable '%s' value change was discarded, to make pruning slower than rotation."
+
+ER_READ_ONLY_WAS_UPDATED
+  eng "read_only was updated to '%s' by '%s'@'%s'"
+
+ER_SUPER_READ_ONLY_WAS_UPDATED
+  eng "super_read_only was updated to '%s' by '%s'@'%s'"
 
 ################################################################################
 # Error numbers 50000 to 51999 are reserved. Please do not use them for

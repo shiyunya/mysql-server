@@ -3600,12 +3600,18 @@ static bool fix_read_only(sys_var *self, THD *thd, enum_var_type) {
   bool result = true;
   const bool new_read_only = read_only;  // make a copy before releasing a mutex
   DBUG_TRACE;
+  auto log_read_only_updated = [thd]() {
+    Security_context *sctx = thd->security_context();
+    LogErr(INFORMATION_LEVEL, ER_READ_ONLY_WAS_UPDATED,
+           read_only ? "ON" : "OFF", sctx->user().str, sctx->host_or_ip().str);
+  };
 
   /*
     If we're not newly turning on READ_ONLY, we don't have to worry
     about locks.
   */
   if (read_only == false || read_only == opt_readonly) {
+    const bool changed = (read_only != opt_readonly);
     opt_readonly = read_only;
 
     /*
@@ -3619,6 +3625,7 @@ static bool fix_read_only(sys_var *self, THD *thd, enum_var_type) {
       // Do this last as it temporarily releases the global sys-var lock.
       event_scheduler_restart(thd);
     }
+    if (changed) log_read_only_updated();
     return false;
   }
 
@@ -3648,6 +3655,7 @@ static bool fix_read_only(sys_var *self, THD *thd, enum_var_type) {
       // Do this last as it temporarily releases the global sys-var lock.
       event_scheduler_restart(thd);
     }
+    log_read_only_updated();
     return false;
   }
 
@@ -3684,11 +3692,18 @@ end_with_mutex_unlock:
   mysql_mutex_lock(&LOCK_global_system_variables);
 end:
   read_only = opt_readonly;
+  if (!result) log_read_only_updated();
   return result;
 }
 
 static bool fix_super_read_only(sys_var *, THD *thd, enum_var_type type) {
   DBUG_TRACE;
+  auto log_super_read_only_updated = [thd]() {
+    Security_context *sctx = thd->security_context();
+    LogErr(INFORMATION_LEVEL, ER_SUPER_READ_ONLY_WAS_UPDATED,
+           super_read_only ? "ON" : "OFF", sctx->user().str,
+           sctx->host_or_ip().str);
+  };
 
   /* return if no changes: */
   if (super_read_only == opt_super_readonly) return false;
@@ -3699,7 +3714,7 @@ static bool fix_super_read_only(sys_var *, THD *thd, enum_var_type type) {
 
     // Do this last as it temporarily releases the global sys-var lock.
     event_scheduler_restart(thd);
-
+    log_super_read_only_updated();
     return false;
   }
   bool result = true;
@@ -3719,6 +3734,7 @@ static bool fix_super_read_only(sys_var *, THD *thd, enum_var_type type) {
   */
   if (thd->global_read_lock.is_acquired()) {
     opt_super_readonly = super_read_only;
+    log_super_read_only_updated();
     return false;
   }
 
@@ -3741,6 +3757,7 @@ end_with_mutex_unlock:
   mysql_mutex_lock(&LOCK_global_system_variables);
 end:
   super_read_only = opt_super_readonly;
+  if (!result) log_super_read_only_updated();
   return result;
 }
 
